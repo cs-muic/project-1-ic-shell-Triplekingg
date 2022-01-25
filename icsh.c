@@ -1,6 +1,7 @@
 #include <stdio.h>
 
-int main() {
-    printf("Hello, World!\n");
+int main(int argc, char *argv[]) {
+    printf("Starting IC shell\n");
+    printf("icsh $ ");
     return 0;
 }
