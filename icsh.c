@@ -3,53 +3,62 @@
 
 char cmd[100]; //command
 char *args[32]; //commands and args split into array of strings
+char prev[100]; //stores previous command
 
 void startShell();
+
 void getCommand();
+
 void splitCmd();
+
 void echo();
 
-void echo(){
-    int length = sizeof(args)/sizeof(args[0]);
+void echo() {
+    int length = sizeof(args) / sizeof(args[0]);
     for (int i = 1; i < length; i++) {
-        if(args[i]==NULL) break;
+        if (args[i] == NULL) break;
         printf("%s ", args[i]);
     }
+    printf("\n");
 }
 
-void getCommand(){
-    printf("\nicsh $\t");
-    fgets(cmd,100,stdin);
+void getCommand() {
+    printf("icsh $\t");
+    fgets(cmd, 100, stdin);
     int len = strlen(cmd);
-    cmd[len-1] = '\0';
+    cmd[len - 1] = '\0';
 }
 
-void startShell(){
-    while(1){
+void startShell() {
+    while (1) {
         getCommand();
-        if(!strcmp("", cmd)){
+        if (strcmp("!!", cmd)) {
+            memcpy(prev, cmd, strlen(cmd));
+        }
+        splitCmd();
+        if (!strcmp("", cmd)) {
             continue;
         }
-        if(!strcmp("exit", cmd)){
+        if (!strcmp("exit", cmd)) {
             printf("bye\n");
             break;
         }
-        splitCmd();
-        if(!strcmp("echo", args[0])){
+        if (!strcmp("echo", args[0])) {
             echo(args);
+        }
+        if (!strcmp("!!", args[0])) {
+            printf("%s\n",prev);
         }
     }
 }
 
 
-
-void splitCmd(){
+void splitCmd() {
     int i = 0;
-    char *p = strtok (cmd, " ");
-    while (p != NULL)
-    {
+    char *p = strtok(cmd, " ");
+    while (p != NULL) {
         args[i++] = p;
-        p = strtok (NULL, " ");
+        p = strtok(NULL, " ");
     }
 }
 
