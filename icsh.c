@@ -14,6 +14,14 @@ void splitCmd();
 
 void echo();
 
+void systemExit();
+
+void systemExit(){
+    int num = atoi(args[1]);
+    printf("bye\n");
+    exit(num);
+}
+
 void echo() {
     int length = sizeof(args) / sizeof(args[0]);
     for (int i = 1; i < length; i++) {
@@ -43,7 +51,7 @@ void startShell() {
             continue;
         }
         else if (!strcmp("exit", cmd)) {
-            printf("bye\n");
+            systemExit();
             break;
         }
         else if (!strcmp("echo", args[0])) {
