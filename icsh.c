@@ -42,15 +42,18 @@ void startShell() {
         if (!strcmp("", cmd)) {
             continue;
         }
-        if (!strcmp("exit", cmd)) {
+        else if (!strcmp("exit", cmd)) {
             printf("bye\n");
             break;
         }
-        if (!strcmp("echo", args[0])) {
+        else if (!strcmp("echo", args[0])) {
             echo(args);
         }
-        if (!strcmp("!!", args[0])) {
-            printf("%s\n",prev);
+        else if (!strcmp("!!", args[0])) {
+            printf("%s\n", prev);
+        }
+        else{
+            printf("bad command\n");
         }
     }
 }
