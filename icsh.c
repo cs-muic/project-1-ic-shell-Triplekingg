@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "string.h"
+#include "stdlib.h"
 
 char cmd[100]; //command
 char *args[32]; //commands and args split into array of strings
@@ -23,6 +24,7 @@ void echo() {
 }
 
 void getCommand() {
+    memset(cmd,0,sizeof(cmd));
     printf("icsh $\t");
     fgets(cmd, 100, stdin);
     int len = strlen(cmd);
@@ -33,6 +35,7 @@ void startShell() {
     while (1) {
         getCommand();
         if (strcmp("!!", cmd)) {
+            memset(prev,0,sizeof(prev));
             memcpy(prev, cmd, strlen(cmd));
         }
         splitCmd();
