@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "string.h"
-#include "stdlib.h"
+#include <stdlib.h>
+#include <sys/wait.h>
 
 char cmd[100]; //command
 char *args[32]; //commands and args split into array of strings
@@ -18,8 +19,10 @@ void systemExit();
 
 void systemExit(){
     int num = atoi(args[1]);
-    printf("bye\n");
-    exit(num);
+    int converted = WEXITSTATUS(num);
+    printf("Exited status no = %d\n", converted);
+    printf("Bye\n");
+    exit(converted);
 }
 
 void echo() {
@@ -50,7 +53,7 @@ void startShell() {
         if (!strcmp("", cmd)) {
             continue;
         }
-        else if (!strcmp("exit", cmd)) {
+        else if (!strcmp("exit", args[0])) {
             systemExit();
             break;
         }
