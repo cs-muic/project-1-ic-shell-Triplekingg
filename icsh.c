@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
-char cmd[100]; //command
+char cmd[256]; //command
 char *args[32]; //commands and args split into array of strings
-char prev[100]; //stores previous command
+char prev[256]; //stores previous command
 
 void startShell();
 
@@ -20,9 +20,16 @@ void systemExit();
 void systemExit(){
     int num = atoi(args[1]);
     int converted = WEXITSTATUS(num);
-    printf("Exited status no = %d\n", converted);
-    printf("Bye\n");
-    exit(converted);
+    if(num>255){
+        printf("Exited status no = %d\n", converted);
+        exit(converted);
+    }
+    else{
+        printf("Exited status no = %d\n", num);
+        printf("Bye\n");
+        exit(num);
+    }
+
 }
 
 void echo() {
@@ -45,9 +52,11 @@ void getCommand() {
 void startShell() {
     while (1) {
         getCommand();
-        if (strcmp("!!", cmd)) {
-            memset(prev,0,sizeof(prev));
-            memcpy(prev, cmd, strlen(cmd));
+        if (strcmp("!!", cmd)){
+            if(strstr(cmd,"echo")){
+                memset(prev,0,sizeof(prev));
+                memcpy(prev, cmd, strlen(cmd));
+            }
         }
         splitCmd();
         if (!strcmp("", cmd)) {
