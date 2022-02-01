@@ -2,10 +2,15 @@
 #include "string.h"
 #include <stdlib.h>
 #include <sys/wait.h>
+#include<unistd.h>
 
 char cmd[256]; //command
 char *args[32]; //commands and args split into array of strings
 char prev[256]; //stores previous command
+int found = 0; //indicates whether the script that user input exists or not
+int argNo; //stores number of arguments from user when starting shell
+char *file; // stores script name
+char path[200]; //stores working directory path
 
 void startShell();
 
@@ -47,6 +52,23 @@ void getCommand() {
     cmd[len - 1] = '\0';
 }
 
+//checks whether the script exists
+void scriptFinder(char *f){
+    getcwd(path, 200);
+    strcat(path,"/");
+    strcat(path,f);
+    if(access( path, F_OK ) != -1)
+    {
+        found=1;
+    }
+    else
+    {
+        found=0;
+        printf("file is not found\n");
+    }
+
+}
+
 void startShell() {
     while (1) {
         getCommand();
@@ -83,9 +105,16 @@ void splitCmd() {
 }
 
 
-int main() {
-    printf("Starting IC shell\n");
-    startShell();
+int main(int argc, char *argv[]) {
+    if(argc>1){
+        argNo = argc;
+        file = malloc(sizeof(char)* strlen(argv[1]));
+        strcpy(file,argv[1]);
+        scriptFinder(file);
+    } else{
+        printf("Starting IC shell\n");
+        startShell();
+    }
     return 0;
 }
 
