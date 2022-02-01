@@ -127,7 +127,7 @@ void startShell() {
                     memcpy(prev, cmd, strlen(cmd));
                 }
             }
-            splitCmd();
+            splitCmd(cmd);
             if (!strcmp("", cmd)) {
                 continue;
             } else if (!strcmp("exit", args[0])) {
@@ -137,6 +137,10 @@ void startShell() {
                 echo(args);
             } else if (!strcmp("!!", args[0])) {
                 printf("%s\n", prev);
+                if(strstr(prev,"echo")){
+                    splitCmd(prev);
+                    echo(args);
+                }
             } else {
                 printf("bad command\n");
             }
@@ -151,7 +155,7 @@ void startShell() {
                     memcpy(prev, cmd, strlen(cmd));
                 }
             }
-            splitCmd();
+            splitCmd(cmd);
             if (!strcmp("", cmd)) {
                 continue;
             } else if (!strcmp("exit", args[0])) {
@@ -161,7 +165,10 @@ void startShell() {
                 echo(args);
             } else if (!strcmp("!!", args[0])) {
                 printf("%s\n", prev);
-
+                if(strstr(prev,"echo")){
+                    splitCmd(prev);
+                    echo(args);
+                }
             } else {
                 printf("bad command\n");
             }
@@ -171,9 +178,9 @@ void startShell() {
 }
 
 
-void splitCmd() {
+void splitCmd(char *c) {
     int i = 0;
-    char *p = strtok(cmd, " ");
+    char *p = strtok(c, " ");
     while (p != NULL) {
         args[i++] = p;
         p = strtok(NULL, " ");
