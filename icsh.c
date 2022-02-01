@@ -12,6 +12,7 @@ int argNo; //stores number of arguments from user when starting shell
 char *file; // stores script name
 char path[200]; //stores working directory path
 char *scriptCommands[256][256] = {""}; // stores each line of scriptCommands from script
+int lines; // number of lines from the script
 
 void startShell();
 
@@ -47,13 +48,17 @@ void echo() { //For echo command
     printf("\n");
 }
 
-void getCommand(int found) {
+void getCommand() {
     memset(cmd, 0, sizeof(cmd)); //deleting the command that was stored in cmd before
     printf("icsh $\t");
     fgets(cmd, 100, stdin);
     int len = strlen(cmd);
     cmd[len - 1] = '\0';
+}
 
+void getCommandFromScript(int line) {
+    memset(cmd, 0, sizeof(cmd)); //deleting the command that was stored in cmd before
+    strcpy(cmd,scriptCommands[line]);
 }
 
 //checks whether the script exists
@@ -65,6 +70,7 @@ void scriptFinder(char *f){
     {
         found=1;
         readScript(f);
+        startShell();
     }
     else
     {
@@ -108,34 +114,60 @@ void readScript(char* script){
         memset(each, 0, sizeof(each));
         line++;
     }
-    for(int i=0;i< line;i++){
-        printf("%s\n",scriptCommands[i]);
-    }
+    lines = line;
 }
 
 void startShell() {
-    while (1) {
-        getCommand(found);
-        if (strcmp("!!", cmd)) {
-            if (strstr(cmd, "echo")) {
-                memset(prev, 0, sizeof(prev));
-                memcpy(prev, cmd, strlen(cmd));
+    if(found==0){
+        while (1) {
+            getCommand();
+            if (strcmp("!!", cmd)) {
+                if (strstr(cmd, "echo")) {
+                    memset(prev, 0, sizeof(prev));
+                    memcpy(prev, cmd, strlen(cmd));
+                }
+            }
+            splitCmd();
+            if (!strcmp("", cmd)) {
+                continue;
+            } else if (!strcmp("exit", args[0])) {
+                systemExit();
+                break;
+            } else if (!strcmp("echo", args[0])) {
+                echo(args);
+            } else if (!strcmp("!!", args[0])) {
+                printf("%s\n", prev);
+            } else {
+                printf("bad command\n");
             }
         }
-        splitCmd();
-        if (!strcmp("", cmd)) {
-            continue;
-        } else if (!strcmp("exit", args[0])) {
-            systemExit();
-            break;
-        } else if (!strcmp("echo", args[0])) {
-            echo(args);
-        } else if (!strcmp("!!", args[0])) {
-            printf("%s\n", prev);
-        } else {
-            printf("bad command\n");
+    }
+    if(found==1){
+        for(int i = 0; i<lines;i++){
+            getCommandFromScript(i);
+            if (strcmp("!!", cmd)) {
+                if (strstr(cmd, "echo")) {
+                    memset(prev, 0, sizeof(prev));
+                    memcpy(prev, cmd, strlen(cmd));
+                }
+            }
+            splitCmd();
+            if (!strcmp("", cmd)) {
+                continue;
+            } else if (!strcmp("exit", args[0])) {
+                systemExit();
+                break;
+            } else if (!strcmp("echo", args[0])) {
+                echo(args);
+            } else if (!strcmp("!!", args[0])) {
+                printf("%s\n", prev);
+
+            } else {
+                printf("bad command\n");
+            }
         }
     }
+
 }
 
 
