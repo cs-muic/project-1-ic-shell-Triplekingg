@@ -48,6 +48,7 @@ void echo() { //For echo command
     printf("\n");
 }
 
+//get command from user
 void getCommand() {
     memset(cmd, 0, sizeof(cmd)); //deleting the command that was stored in cmd before
     printf("icsh $\t");
@@ -56,31 +57,30 @@ void getCommand() {
     cmd[len - 1] = '\0';
 }
 
+//get command from the script
 void getCommandFromScript(int line) {
     memset(cmd, 0, sizeof(cmd)); //deleting the command that was stored in cmd before
-    strcpy(cmd,scriptCommands[line]);
+    strcpy(cmd, scriptCommands[line]);
 }
 
-//checks whether the script exists
-void scriptFinder(char *f){
+
+//checks whether the scriptfile exists
+void scriptFinder(char *f) {
     getcwd(path, 200);
-    strcat(path,"/");
-    strcat(path,f);
-    if(access( path, F_OK ) != -1)
-    {
-        found=1;
+    strcat(path, "/");
+    strcat(path, f);
+    if (access(path, F_OK) != -1) {
+        found = 1;
         readScript(f);
         startShell();
-    }
-    else
-    {
-        found=0;
+    } else {
+        found = 0;
         printf("file is not found\n");
     }
-
 }
 
-void readScript(char* script){
+//read from sh file
+void readScript(char *script) {
     //To access the script
     FILE *ptrScript;
     char c;
@@ -105,12 +105,12 @@ void readScript(char* script){
             each[i] = c;
             i++;
             c = fgetc(ptrScript);
-            if(c=='\n'){
+            if (c == '\n') {
                 each[i] = '\0';
             }
         }
         c = fgetc(ptrScript);
-        strcpy(scriptCommands[line],each);
+        strcpy(scriptCommands[line], each);
         memset(each, 0, sizeof(each));
         line++;
     }
@@ -118,7 +118,8 @@ void readScript(char* script){
 }
 
 void startShell() {
-    if(found==0){
+    //if interactive mode
+    if (found == 0) {
         while (1) {
             getCommand();
             if (strcmp("!!", cmd)) {
@@ -137,7 +138,7 @@ void startShell() {
                 echo(args);
             } else if (!strcmp("!!", args[0])) {
                 printf("%s\n", prev);
-                if(strstr(prev,"echo")){
+                if (strstr(prev, "echo")) {
                     splitCmd(prev);
                     echo(args);
                 }
@@ -146,8 +147,9 @@ void startShell() {
             }
         }
     }
-    if(found==1){
-        for(int i = 0; i<lines;i++){
+    //if batch mode
+    if (found == 1) {
+        for (int i = 0; i < lines; i++) {
             getCommandFromScript(i);
             if (strcmp("!!", cmd)) {
                 if (strstr(cmd, "echo")) {
@@ -165,7 +167,7 @@ void startShell() {
                 echo(args);
             } else if (!strcmp("!!", args[0])) {
                 printf("%s\n", prev);
-                if(strstr(prev,"echo")){
+                if (strstr(prev, "echo")) {
                     splitCmd(prev);
                     echo(args);
                 }
@@ -174,10 +176,9 @@ void startShell() {
             }
         }
     }
-
 }
 
-
+//splits command into array of strings
 void splitCmd(char *c) {
     int i = 0;
     char *p = strtok(c, " ");
@@ -189,12 +190,14 @@ void splitCmd(char *c) {
 
 
 int main(int argc, char *argv[]) {
-    if(argc>1){
+    //if user enters argument
+    if (argc > 1) {
         argNo = argc;
-        file = malloc(sizeof(char)* strlen(argv[1]));
-        strcpy(file,argv[1]);
+        file = malloc(sizeof(char) * strlen(argv[1]));
+        strcpy(file, argv[1]);
         scriptFinder(file);
-    } else{
+    } else {
+        //if user does not enter argument
         printf("Starting IC shell\n");
         startShell();
     }
