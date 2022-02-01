@@ -5,12 +5,13 @@
 #include<unistd.h>
 
 char cmd[256]; //command
-char *args[32]; //commands and args split into array of strings
+char *args[32]; //scriptCommands and args split into array of strings
 char prev[256]; //stores previous command
 int found = 0; //indicates whether the script that user input exists or not
 int argNo; //stores number of arguments from user when starting shell
 char *file; // stores script name
 char path[200]; //stores working directory path
+char *scriptCommands[256][256] = {""}; // stores each line of scriptCommands from script
 
 void startShell();
 
@@ -21,6 +22,8 @@ void splitCmd();
 void echo();
 
 void systemExit();
+
+void readScript();
 
 void systemExit() { //For exit
     int num = atoi(args[1]);
@@ -44,12 +47,13 @@ void echo() { //For echo command
     printf("\n");
 }
 
-void getCommand() {
+void getCommand(int found) {
     memset(cmd, 0, sizeof(cmd)); //deleting the command that was stored in cmd before
     printf("icsh $\t");
     fgets(cmd, 100, stdin);
     int len = strlen(cmd);
     cmd[len - 1] = '\0';
+
 }
 
 //checks whether the script exists
@@ -60,6 +64,7 @@ void scriptFinder(char *f){
     if(access( path, F_OK ) != -1)
     {
         found=1;
+        readScript(f);
     }
     else
     {
@@ -69,9 +74,48 @@ void scriptFinder(char *f){
 
 }
 
+void readScript(char* script){
+    //To access the script
+    FILE *ptrScript;
+    char c;
+
+    // Open script file
+    ptrScript = fopen(script, "r");
+    if (ptrScript == NULL) {
+        printf("Cannot open file \n");
+        exit(0);
+    }
+
+    // Read contents from script
+    int line = 0;
+    c = fgetc(ptrScript);
+    while (c != EOF) {
+        int i = 0;
+        char each[32];
+        while (c != '\n') {
+            if (c == EOF) {
+                break;
+            }
+            each[i] = c;
+            i++;
+            c = fgetc(ptrScript);
+            if(c=='\n'){
+                each[i] = '\0';
+            }
+        }
+        c = fgetc(ptrScript);
+        strcpy(scriptCommands[line],each);
+        memset(each, 0, sizeof(each));
+        line++;
+    }
+    for(int i=0;i< line;i++){
+        printf("%s\n",scriptCommands[i]);
+    }
+}
+
 void startShell() {
     while (1) {
-        getCommand();
+        getCommand(found);
         if (strcmp("!!", cmd)) {
             if (strstr(cmd, "echo")) {
                 memset(prev, 0, sizeof(prev));
