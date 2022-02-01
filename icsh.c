@@ -21,11 +21,10 @@ void systemExit(){
     int num = atoi(args[1]);
     int converted = WEXITSTATUS(num);
     if(num>255){
-        printf("Exited status no = %d\n", converted);
+        printf("Bye\n");
         exit(converted);
     }
     else{
-        printf("Exited status no = %d\n", num);
         printf("Bye\n");
         exit(num);
     }
