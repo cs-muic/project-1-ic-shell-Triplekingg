@@ -1,6 +1,6 @@
-TARGET=test
+TARGET=icsh
 
 make:
-	gcc -o test icsh.c
+	gcc -o icsh icsh.c
 clean:
 	rm $(TARGET)
