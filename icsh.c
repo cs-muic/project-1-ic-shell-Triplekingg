@@ -143,6 +143,14 @@ void startShell() {
                     echo(args);
                 }
             } else {
+                int id = fork();
+                if(id==0){
+                    execvp(args[0],args);
+                    exit(0);
+                }
+                if(id != 0){
+                    wait(NULL);
+                }
                 printf("bad command\n");
             }
         }
@@ -180,6 +188,7 @@ void startShell() {
 
 //splits command into array of strings
 void splitCmd(char *c) {
+    memset(args, 0, 32);
     int i = 0;
     char *p = strtok(c, " ");
     while (p != NULL) {
