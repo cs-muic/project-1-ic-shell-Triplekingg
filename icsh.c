@@ -143,15 +143,17 @@ void startShell() {
                     echo(args);
                 }
             } else {
+                //If it is an external command, fork a new process
                 int id = fork();
-                if(id==0){
-                    execvp(args[0],args);
+                if(id==0){ // Execute the external program
+                    if(execvp(args[0],args)==-1){ //If the execution fails, it is a bad command
+                        printf("bad command\n");
+                    }
                     exit(0);
                 }
                 if(id != 0){
                     wait(NULL);
                 }
-                printf("bad command\n");
             }
         }
     }
