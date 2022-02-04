@@ -15,6 +15,7 @@ char path[200]; //stores working directory path
 char *scriptCommands[256][256] = {""}; // stores each line of scriptCommands from script
 int lines; // number of lines from the script
 int childId;//stores pid of child process that will be used for signal handling(to suspend/kill that process)
+int childExitStatus;//stores exit status of child process and will be used when inputting "echo $?"
 
 void startShell();
 
@@ -123,8 +124,9 @@ void handle_sigint(int sig)
 {
     if(sig==2){
         kill(childId,sig);
+        printf("Process Terminated\n");
+        startShell();
     }
-    startShell();
 }
 
 void handle_sigstp()
@@ -135,12 +137,14 @@ void handle_sigstp()
 }
 
 void startShell() {
-    signal(SIGINT, handle_sigint);
-    signal(SIGTSTP, handle_sigstp);
     //if interactive mode
     if (found == 0) {
         while (1) {
             getCommand();
+            if (!strcmp("echo $?", cmd)) {
+                printf("Exit status of previous process is %d\n", childExitStatus);
+                continue;
+            }
             if (strcmp("!!", cmd)) {
                 if (strstr(cmd, "echo")) {
                     memset(prev, 0, sizeof(prev));
@@ -150,7 +154,8 @@ void startShell() {
             splitCmd(cmd);
             if (!strcmp("", cmd)) {
                 continue;
-            } else if (!strcmp("exit", args[0])) {
+            }
+            else if (!strcmp("exit", args[0])) {
                 systemExit();
                 break;
             } else if (!strcmp("echo", args[0])) {
@@ -168,11 +173,15 @@ void startShell() {
                     childId = getpid();
                     if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
                         printf("bad command\n");
+                        kill(childId,SIGKILL);
                     }
-                    exit(0);
                 }
-                if (id != 0) {
-                    wait(NULL);
+                int status;
+                waitpid(childId, &status, 0);
+                childId = NULL;
+                if ( WIFEXITED(status) )
+                {
+                    childExitStatus = WEXITSTATUS(status);
                 }
             }
         }
@@ -221,6 +230,8 @@ void splitCmd(char *c) {
 
 
 int main(int argc, char *argv[]) {
+    signal(SIGINT, handle_sigint);
+    signal(SIGTSTP, handle_sigstp);
     //if user enters argument
     if (argc > 1) {
         argNo = argc;
