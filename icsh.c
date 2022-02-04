@@ -14,7 +14,7 @@ char *file; // stores script name
 char path[200]; //stores working directory path
 char *scriptCommands[256][256] = {""}; // stores each line of scriptCommands from script
 int lines; // number of lines from the script
-int childId;//stores pid of child process
+int childId;//stores pid of child process that will be used for signal handling(to suspend/kill that process)
 
 void startShell();
 
@@ -127,8 +127,16 @@ void handle_sigint(int sig)
     startShell();
 }
 
+void handle_sigstp()
+{
+    kill(childId,SIGTSTP);
+    printf("Process Suspended\n");
+    startShell();
+}
+
 void startShell() {
     signal(SIGINT, handle_sigint);
+    signal(SIGTSTP, handle_sigstp);
     //if interactive mode
     if (found == 0) {
         while (1) {
