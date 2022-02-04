@@ -120,18 +120,16 @@ void readScript(char *script) {
     lines = line;
 }
 
-void handle_sigint(int sig)
-{
-    if(sig==2){
-        kill(childId,sig);
+void handle_sigint(int sig) {
+    if (sig == 2) {
+        kill(childId, sig);
         printf("Process Terminated\n");
         startShell();
     }
 }
 
-void handle_sigstp()
-{
-    kill(childId,SIGTSTP);
+void handle_sigstp() {
+    kill(childId, SIGTSTP);
     printf("Process Suspended\n");
     startShell();
 }
@@ -154,8 +152,7 @@ void startShell() {
             splitCmd(cmd);
             if (!strcmp("", cmd)) {
                 continue;
-            }
-            else if (!strcmp("exit", args[0])) {
+            } else if (!strcmp("exit", args[0])) {
                 systemExit();
                 break;
             } else if (!strcmp("echo", args[0])) {
@@ -173,14 +170,13 @@ void startShell() {
                     childId = getpid();
                     if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
                         printf("bad command\n");
-                        kill(childId,SIGKILL);
+                        kill(childId, SIGKILL);
                     }
                 }
                 int status;
                 waitpid(childId, &status, 0);
                 childId = NULL;
-                if ( WIFEXITED(status) )
-                {
+                if (WIFEXITED(status)) {
                     childExitStatus = WEXITSTATUS(status);
                 }
             }
