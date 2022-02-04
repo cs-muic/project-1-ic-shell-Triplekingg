@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include<unistd.h>
+#include<signal.h>
 
 char cmd[256]; //command
 char *args[32]; //scriptCommands and args split into array of strings
@@ -13,6 +14,7 @@ char *file; // stores script name
 char path[200]; //stores working directory path
 char *scriptCommands[256][256] = {""}; // stores each line of scriptCommands from script
 int lines; // number of lines from the script
+int childId;//stores pid of child process
 
 void startShell();
 
@@ -117,7 +119,16 @@ void readScript(char *script) {
     lines = line;
 }
 
+void handle_sigint(int sig)
+{
+    if(sig==2){
+        kill(childId,sig);
+    }
+    startShell();
+}
+
 void startShell() {
+    signal(SIGINT, handle_sigint);
     //if interactive mode
     if (found == 0) {
         while (1) {
@@ -145,7 +156,8 @@ void startShell() {
             } else {
                 //If it is an external command, fork a new process
                 int id = fork();
-                if (id == 0) { // Execute the external program
+                if (id == 0) {// Execute the external program
+                    childId = getpid();
                     if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
                         printf("bad command\n");
                     }
