@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include<unistd.h>
 #include<signal.h>
+#include <ctype.h>
 
 char cmd[256]; //command
 char *args[32]; //scriptCommands and args split into array of strings
@@ -16,6 +17,10 @@ char *scriptCommands[256][256] = {""}; // stores each line of scriptCommands fro
 int lines; // number of lines from the script
 int childId;//stores pid of child process that will be used for signal handling(to suspend/kill that process)
 int childExitStatus;//stores exit status of child process and will be used when inputting "echo $?"
+char out[100];
+char* outputFile;// stores name of file where output will be directed
+char redirectedCmd[256]; //stores command to be used for redirection
+
 
 void startShell();
 
@@ -64,6 +69,25 @@ void getCommand() {
 void getCommandFromScript(int line) {
     memset(cmd, 0, sizeof(cmd)); //deleting the command that was stored in cmd before
     strcpy(cmd, scriptCommands[line]);
+}
+
+void doExternalCommand(){
+    //If it is an external command, fork a new process
+    int id = fork();
+    if (id == 0) {// Execute the external program
+        childId = getpid();
+        if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
+            printf("bad command\n");
+            kill(childId, SIGKILL);
+        }
+    }
+//    wait(NULL);
+    int status;
+    waitpid(childId, &status, 0);
+    childId = NULL;
+    if (WIFEXITED(status)) {
+        childExitStatus = WEXITSTATUS(status);
+    }
 }
 
 
@@ -128,6 +152,21 @@ void handle_sigint(int sig) {
     }
 }
 
+char* removeLeadingSpaces(char* str)
+{
+    static char str1[99];
+    int count = 0, j, k;
+    while (str[count] == ' ') {
+        count++;
+    }
+    for (j = count, k = 0;
+         str[j] != '\0'; j++, k++) {
+        str1[k] = str[j];
+    }
+    str1[k] = '\0';
+    return str1;
+}
+
 void handle_sigstp() {
     kill(childId, SIGTSTP);
     printf("Process Suspended\n");
@@ -143,13 +182,28 @@ void startShell() {
                 printf("Exit status of previous process is %d\n", childExitStatus);
                 continue;
             }
+            if(strstr(cmd,">")){
+                memset(out, 0, sizeof(out));
+                splitCmd(cmd,">");
+                memcpy(out, args[1], strlen(args[1]));
+                memset(redirectedCmd, 0, sizeof(redirectedCmd));
+                memcpy(redirectedCmd,args[0], strlen(args[0]));
+                //store name of output file here
+                outputFile = removeLeadingSpaces(out);
+                printf("%s\n", outputFile);
+                printf("%s\n", redirectedCmd);
+
+
+
+                break;
+            }
             if (strcmp("!!", cmd)) {
                 if (strstr(cmd, "echo")) {
                     memset(prev, 0, sizeof(prev));
                     memcpy(prev, cmd, strlen(cmd));
                 }
             }
-            splitCmd(cmd);
+            splitCmd(cmd," ");
             if (!strcmp("", cmd)) {
                 continue;
             } else if (!strcmp("exit", args[0])) {
@@ -160,25 +214,11 @@ void startShell() {
             } else if (!strcmp("!!", args[0])) {
                 printf("%s\n", prev);
                 if (strstr(prev, "echo")) {
-                    splitCmd(prev);
+                    splitCmd(prev," ");
                     echo(args);
                 }
             } else {
-                //If it is an external command, fork a new process
-                int id = fork();
-                if (id == 0) {// Execute the external program
-                    childId = getpid();
-                    if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
-                        printf("bad command\n");
-                        kill(childId, SIGKILL);
-                    }
-                }
-                int status;
-                waitpid(childId, &status, 0);
-                childId = NULL;
-                if (WIFEXITED(status)) {
-                    childExitStatus = WEXITSTATUS(status);
-                }
+                doExternalCommand();
             }
         }
     }
@@ -192,7 +232,7 @@ void startShell() {
                     memcpy(prev, cmd, strlen(cmd));
                 }
             }
-            splitCmd(cmd);
+            splitCmd(cmd," ");
             if (!strcmp("", cmd)) {
                 continue;
             } else if (!strcmp("exit", args[0])) {
@@ -203,7 +243,7 @@ void startShell() {
             } else if (!strcmp("!!", args[0])) {
                 printf("%s\n", prev);
                 if (strstr(prev, "echo")) {
-                    splitCmd(prev);
+                    splitCmd(prev, " ");
                     echo(args);
                 }
             } else {
@@ -214,13 +254,13 @@ void startShell() {
 }
 
 //splits command into array of strings
-void splitCmd(char *c) {
+void splitCmd(char *c, char *at) {
     memset(args, 0, 32);
     int i = 0;
-    char *p = strtok(c, " ");
+    char *p = strtok(c, at);
     while (p != NULL) {
         args[i++] = p;
-        p = strtok(NULL, " ");
+        p = strtok(NULL, at);
     }
 }
 
