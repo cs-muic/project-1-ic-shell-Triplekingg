@@ -47,7 +47,6 @@ void systemExit() { //For exit
         printf("Bye\n");
         exit(num);
     }
-
 }
 
 void echo() { //For echo command
