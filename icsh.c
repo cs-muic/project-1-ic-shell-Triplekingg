@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <sys/file.h>
 #include "string.h"
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -20,6 +21,7 @@ int childExitStatus;//stores exit status of child process and will be used when 
 char out[100];
 char* outputFile;// stores name of file where output will be directed
 char redirectedCmd[256]; //stores command to be used for redirection
+int isRedirected = 0; //store whether command is to be redirected or not
 
 
 void startShell();
@@ -71,22 +73,38 @@ void getCommandFromScript(int line) {
     strcpy(cmd, scriptCommands[line]);
 }
 
-void doExternalCommand(){
-    //If it is an external command, fork a new process
-    int id = fork();
-    if (id == 0) {// Execute the external program
-        childId = getpid();
-        if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
-            printf("bad command\n");
-            kill(childId, SIGKILL);
+void doExternalCommand(int redirected){
+    //https://stackoverflow.com/questions/29154056/redirect-stdout-to-a-file for this if condition
+    if(redirected){
+        int filefd = open(outputFile, O_WRONLY|O_CREAT, 0666);
+        if (!fork()) {
+            close(1);//Close stdout
+            dup(filefd);
+            if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
+                printf("bad command\n");
+                kill(childId, SIGKILL);
+            }
+        } else {
+            close(filefd);
+            wait(NULL);
         }
-    }
+    } else{
+        //If it is an external command, fork a new process
+        int id = fork();
+        if (id == 0) {// Execute the external program
+            childId = getpid();
+            if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
+                printf("bad command\n");
+                kill(childId, SIGKILL);
+            }
+        }
 //    wait(NULL);
-    int status;
-    waitpid(childId, &status, 0);
-    childId = NULL;
-    if (WIFEXITED(status)) {
-        childExitStatus = WEXITSTATUS(status);
+        int status;
+        waitpid(childId, &status, 0);
+        childId = NULL;
+        if (WIFEXITED(status)) {
+            childExitStatus = WEXITSTATUS(status);
+        }
     }
 }
 
@@ -177,25 +195,31 @@ void startShell() {
     //if interactive mode
     if (found == 0) {
         while (1) {
+            isRedirected = 0;
             getCommand();
             if (!strcmp("echo $?", cmd)) {
                 printf("Exit status of previous process is %d\n", childExitStatus);
                 continue;
             }
             if(strstr(cmd,">")){
+                isRedirected = 1;
                 memset(out, 0, sizeof(out));
+                //split command and output file
                 splitCmd(cmd,">");
+                //store output file
                 memcpy(out, args[1], strlen(args[1]));
+                //reset previous redirected command
                 memset(redirectedCmd, 0, sizeof(redirectedCmd));
+                //store redirected command
                 memcpy(redirectedCmd,args[0], strlen(args[0]));
-                //store name of output file here
+                //remove leading spaces from outputfile name
                 outputFile = removeLeadingSpaces(out);
-                printf("%s\n", outputFile);
-                printf("%s\n", redirectedCmd);
-
-
-
-                break;
+                //reset command
+                memset(cmd, 0, sizeof(cmd));
+                //split the redirected command in case of arguments and store in args
+                splitCmd(redirectedCmd," ");
+                doExternalCommand(isRedirected);
+                continue;
             }
             if (strcmp("!!", cmd)) {
                 if (strstr(cmd, "echo")) {
@@ -218,7 +242,7 @@ void startShell() {
                     echo(args);
                 }
             } else {
-                doExternalCommand();
+                doExternalCommand(0);
             }
         }
     }
