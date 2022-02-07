@@ -19,9 +19,10 @@ int lines; // number of lines from the script
 int childId;//stores pid of child process that will be used for signal handling(to suspend/kill that process)
 int childExitStatus;//stores exit status of child process and will be used when inputting "echo $?"
 char out[100];
-char* outputFile;// stores name of file where output will be directed
+char *outputFile;// stores name of file where output will be directed
 char redirectedCmd[256]; //stores command to be used for redirection
-int isRedirected = 0; //store whether command is to be redirected or not
+int redirectOutput = 0; //stores whether output will be redirected or not
+int redirectInput = 0; //stores whether output will be redirected or not
 
 
 void startShell();
@@ -73,10 +74,11 @@ void getCommandFromScript(int line) {
     strcpy(cmd, scriptCommands[line]);
 }
 
-void doExternalCommand(int redirected){
+void doExternalCommand(int output, int input) {
     //https://stackoverflow.com/questions/29154056/redirect-stdout-to-a-file for this if condition
-    if(redirected){
-        int filefd = open(outputFile, O_WRONLY|O_CREAT, 0666);
+    //If redirect output
+    if (output) {
+        int filefd = open(outputFile, O_WRONLY | O_CREAT, 0666);
         if (!fork()) {
             close(1);//Close stdout
             dup(filefd);
@@ -88,7 +90,26 @@ void doExternalCommand(int redirected){
             close(filefd);
             wait(NULL);
         }
-    } else{
+    }
+
+        //https://stackoverflow.com/questions/11515399/implementing-shell-in-c-and-need-help-handling-input-output-redirection
+        // else if redirect input
+    else if (input) {
+        int fd0 = open(outputFile, O_RDONLY);
+        if (!fork()) {
+            dup2(fd0, STDIN_FILENO);
+            if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
+                printf("bad command\n");
+                kill(childId, SIGKILL);
+            }
+        } else {
+            close(fd0);
+            wait(NULL);
+            printf("\n");
+        }
+    }
+        //else execute external command
+    else {
         //If it is an external command, fork a new process
         int id = fork();
         if (id == 0) {// Execute the external program
@@ -170,8 +191,7 @@ void handle_sigint(int sig) {
     }
 }
 
-char* removeLeadingSpaces(char* str)
-{
+char *removeLeadingSpaces(char *str) {
     static char str1[99];
     int count = 0, j, k;
     while (str[count] == ' ') {
@@ -195,39 +215,62 @@ void startShell() {
     //if interactive mode
     if (found == 0) {
         while (1) {
-            isRedirected = 0;
+            redirectOutput = 0;
+            redirectInput = 0;
             getCommand();
             if (!strcmp("echo $?", cmd)) {
                 printf("Exit status of previous process is %d\n", childExitStatus);
                 continue;
             }
-            if(strstr(cmd,">")){
-                isRedirected = 1;
+            if (strstr(cmd, ">")) {
+                redirectOutput = 1;
+                redirectInput = 0;
                 memset(out, 0, sizeof(out));
                 //split command and output file
-                splitCmd(cmd,">");
+                splitCmd(cmd, ">");
                 //store output file
                 memcpy(out, args[1], strlen(args[1]));
                 //reset previous redirected command
                 memset(redirectedCmd, 0, sizeof(redirectedCmd));
                 //store redirected command
-                memcpy(redirectedCmd,args[0], strlen(args[0]));
+                memcpy(redirectedCmd, args[0], strlen(args[0]));
                 //remove leading spaces from outputfile name
                 outputFile = removeLeadingSpaces(out);
                 //reset command
                 memset(cmd, 0, sizeof(cmd));
                 //split the redirected command in case of arguments and store in args
-                splitCmd(redirectedCmd," ");
-                doExternalCommand(isRedirected);
+                splitCmd(redirectedCmd, " ");
+                doExternalCommand(1, 0);
+                continue;
+            } else if (strstr(cmd, "<")) {
+                redirectOutput = 0;
+                redirectInput = 1;
+                memset(out, 0, sizeof(out));
+                //split command and output file
+                splitCmd(cmd, "<");
+                //store output file
+                memcpy(out, args[1], strlen(args[1]));
+                //reset previous redirected command
+                memset(redirectedCmd, 0, sizeof(redirectedCmd));
+                //store redirected command
+                memcpy(redirectedCmd, args[0], strlen(args[0]));
+                //remove leading spaces from outputfile name
+                outputFile = removeLeadingSpaces(out);
+                //reset command
+                memset(cmd, 0, sizeof(cmd));
+                //split the redirected command in case of arguments and store in args
+                splitCmd(redirectedCmd, " ");
+                doExternalCommand(0, 1);
                 continue;
             }
+
             if (strcmp("!!", cmd)) {
                 if (strstr(cmd, "echo")) {
                     memset(prev, 0, sizeof(prev));
                     memcpy(prev, cmd, strlen(cmd));
                 }
             }
-            splitCmd(cmd," ");
+            splitCmd(cmd, " ");
             if (!strcmp("", cmd)) {
                 continue;
             } else if (!strcmp("exit", args[0])) {
@@ -238,11 +281,11 @@ void startShell() {
             } else if (!strcmp("!!", args[0])) {
                 printf("%s\n", prev);
                 if (strstr(prev, "echo")) {
-                    splitCmd(prev," ");
+                    splitCmd(prev, " ");
                     echo(args);
                 }
             } else {
-                doExternalCommand(0);
+                doExternalCommand(0, 0);
             }
         }
     }
@@ -256,7 +299,7 @@ void startShell() {
                     memcpy(prev, cmd, strlen(cmd));
                 }
             }
-            splitCmd(cmd," ");
+            splitCmd(cmd, " ");
             if (!strcmp("", cmd)) {
                 continue;
             } else if (!strcmp("exit", args[0])) {
