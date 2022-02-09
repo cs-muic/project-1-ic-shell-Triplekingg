@@ -210,6 +210,31 @@ void handle_sigstp() {
     startShell();
 }
 
+void handle_sigchld() {
+    kill(childId, SIGCHLD);
+    startShell();
+}
+
+void putInBackground(){
+    for(int i=0; i<strlen(args);i++){
+        if(!(strcmp(args[i],"&"))){
+            args[i] = NULL;
+            break;
+        }
+    }
+    pid_t pid=fork();
+    if(pid){
+        childId = getpid();
+        printf("started as %d\n",(int)pid);
+        if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
+            printf("bad command\n");
+            kill(pid, SIGKILL);
+        }
+    }
+    printf("Already put in background\n");
+}
+
+
 void startShell() {
     //if interactive mode
     if (found == 0) {
@@ -217,6 +242,14 @@ void startShell() {
             redirectOutput = 0;
             redirectInput = 0;
             getCommand();
+            int len = strlen(cmd);
+
+            //Check if user wants to execute a job in the background
+            if ( len > 0 && cmd[len-1] == '&' ){
+                splitCmd(cmd," ");
+                putInBackground();
+                continue;
+            }
             if (!strcmp("echo $?", cmd)) {
                 printf("Exit status of previous process is %d\n", childExitStatus);
                 continue;
@@ -334,6 +367,8 @@ void splitCmd(char *c, char *at) {
 int main(int argc, char *argv[]) {
     signal(SIGINT, handle_sigint);
     signal(SIGTSTP, handle_sigstp);
+    signal(SIGCHLD, handle_sigchld);
+
     //if user enters argument
     if (argc > 1) {
         argNo = argc;
