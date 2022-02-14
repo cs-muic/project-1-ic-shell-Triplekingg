@@ -24,6 +24,15 @@ char redirectedCmd[256]; //stores command to be used for redirection
 int redirectOutput = 0; //stores whether output will be redirected or not
 int redirectInput = 0; //stores whether output will be redirected or not
 
+struct job{
+
+    int idJob;
+    int pid;
+    char command[256];
+
+};
+
+struct job jobs[100];
 
 void startShell();
 
@@ -83,7 +92,7 @@ void doExternalCommand(int output, int input) {
             dup(filefd);
             if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
                 printf("bad command\n");
-                kill(childId, SIGKILL);
+                kill(getpid(), SIGKILL);
             }
         } else {
             close(filefd);
@@ -99,7 +108,7 @@ void doExternalCommand(int output, int input) {
             dup2(fd0, STDIN_FILENO);
             if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
                 printf("bad command\n");
-                kill(childId, SIGKILL);
+                kill(getpid(), SIGKILL);
             }
         } else {
             close(fd0);
@@ -115,7 +124,7 @@ void doExternalCommand(int output, int input) {
             childId = getpid();
             if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
                 printf("bad command\n");
-                kill(childId, SIGKILL);
+                kill(getpid(), SIGKILL);
             }
         }
 //    wait(NULL);
@@ -210,10 +219,10 @@ void handle_sigstp() {
     startShell();
 }
 
-void handle_sigchld() {
-    kill(childId, SIGCHLD);
-    startShell();
-}
+//void handle_sigchld() {
+//    kill(childId, SIGCHLD);
+//    startShell();
+//}
 
 void putInBackground(){
     for(int i=0; i<strlen(args);i++){
@@ -222,16 +231,29 @@ void putInBackground(){
             break;
         }
     }
-    pid_t pid=fork();
+
+        pid_t pid=fork();
+    int k;
+    int d;
+    while(d<100){
+        if (jobs[d].idJob== 0) {
+            jobs[d].idJob= d;
+            k = d;
+            jobs[d].pid = pid;
+            memcpy(jobs[d].command, cmd, sizeof(char));
+            break;
+        }
+    }
+    printf("[%d] %d\n", jobs[k].idJob, jobs[k].pid);
     if(pid){
-        childId = getpid();
-        printf("started as %d\n",(int)pid);
+//        printf("started as %d\n",(int)pid);
         if (execvp(args[0], args) == -1) { //If the execution fails, it is a bad command
             printf("bad command\n");
             kill(pid, SIGKILL);
         }
     }
-    printf("Already put in background\n");
+//    printf("Already put in background\n");
+
 }
 
 
@@ -367,7 +389,7 @@ void splitCmd(char *c, char *at) {
 int main(int argc, char *argv[]) {
     signal(SIGINT, handle_sigint);
     signal(SIGTSTP, handle_sigstp);
-    signal(SIGCHLD, handle_sigchld);
+//    signal(SIGCHLD, handle_sigchld);
 
     //if user enters argument
     if (argc > 1) {
